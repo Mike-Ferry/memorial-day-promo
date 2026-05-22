@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a1a3e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Pack the picnic and win a chance at Superstar Retreat tickets!">
+  <title>Pack the Picnic – Win Superstar Retreat Tickets</title>
+  <style>
+    /* ====================================================
+       RESET & BASE
+    ==================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box; margin: 0; padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none; user-select: none;
+    }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #0a1220;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    }
+
+    /* ====================================================
+       GAME WRAPPER + SCENE  (identical approach to Easter Hunt)
+    ==================================================== */
+    #game-wrapper {
+      display: flex; align-items: center; justify-content: center;
+      width: 100vw; height: 100vh; overflow: hidden;
+    }
+
+    /* Fixed 9:16 design canvas — JS scales it to fill any screen */
+    #scene {
+      position: relative;
+      width: 480px; height: 853px;
+      flex-shrink: 0;
+      transform-origin: center center;
+      overflow: hidden;
+      /* Sky → dusk → grass gradient */
+      background: linear-gradient(
+        to bottom,
+        #060d20 0%,
+        #0c1c42 12%,
+        #182e60 22%,
+        #2a477c 34%,
+        #406490 44%,
+        #6a5038 50%,
+        #b87030 52%,
+        #688038 54%,
+        #4e7228 60%,
+        #3c6020 72%,
+        #2c4e18 100%
+      );
+    }
+
+    /* ====================================================
+       FIREWORKS CANVAS
+    ==================================================== */
+    #fw-canvas {
+      position: absolute; top: 0; left: 0;
+      width: 480px; height: 460px;
+      pointer-events: none; z-index: 2;
+    }
+
+    /* ====================================================
+       STARS
+    ==================================================== */
+    .star {
+      position: absolute; background: #fff; border-radius: 50%;
+      pointer-events: none; z-index: 1;
+      animation: twinkle ease-in-out infinite alternate;
+    }
+    @keyframes twinkle {
+      0%   { opacity: 0.1; transform: scale(0.6); }
+      100% { opacity: 0.9; transform: scale(1.3); }
+    }
+
+    /* ====================================================
+       CLOUDS
+    ==================================================== */
+    .cloud {
+      position: absolute; background: rgba(255,255,255,0.09);
+      border-radius: 50px; pointer-events: none; z-index: 3;
+    }
+    .cloud::before, .cloud::after {
+      content: ''; position: absolute; background: inherit; border-radius: 50%;
+    }
+    .cloud-a { width: 82px; height: 22px; top: 7%; left: 2%; animation: cDrift 22s ease-in-out infinite; }
+    .cloud-a::before { width: 36px; height: 36px; top: -18px; left: 10px; }
+    .cloud-a::after  { width: 26px; height: 26px; top: -13px; left: 40px; }
+    .cloud-b { width: 108px; height: 26px; top: 6%; right: 0%; animation: cDrift 30s ease-in-out infinite reverse; }
+    .cloud-b::before { width: 48px; height: 48px; top: -24px; left: 18px; }
+    .cloud-b::after  { width: 34px; height: 34px; top: -16px; left: 58px; }
+    .cloud-c { width: 60px; height: 16px; top: 18%; left: 45%; animation: cDrift 17s ease-in-out infinite; opacity: 0.6; }
+    .cloud-c::before { width: 26px; height: 26px; top: -13px; left: 7px; }
+    .cloud-c::after  { width: 18px; height: 18px; top: -9px;  left: 26px; }
+    @keyframes cDrift {
+      0%, 100% { transform: translateX(0); }
+      50%       { transform: translateX(14px); }
+    }
+
+    /* ====================================================
+       FLAG  (taller: 250px pole, 145×84px flag)
+    ==================================================== */
+    #flag-group {
+      position: absolute; left: 50%; bottom: 35%; transform: translateX(-50%);
+      z-index: 5; pointer-events: none;
+    }
+    #pole-star {
+      width: 16px; height: 16px;
+      background: radial-gradient(circle at 38% 34%, #f8e840, #c8a010);
+      border-radius: 50%; margin: 0 auto 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; color: #f8e840; line-height: 1;
+    }
+    #flagpole {
+      width: 7px; height: 250px;
+      background: linear-gradient(90deg, #a8a8a8, #f0f0f0, #b8b8b8);
+      border-radius: 4px; margin: 0 auto;
+      position: relative;
+      box-shadow: inset 1px 0 3px rgba(0,0,0,0.25);
+    }
+    #flagpole::after {
+      content: '';
+      position: absolute; bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 22px; height: 10px;
+      background: linear-gradient(180deg, #999, #777);
+      border-radius: 3px;
+    }
+    #flag {
+      position: absolute; top: 0; left: 7px;
+      width: 145px; height: 84px;
+      overflow: hidden;
+      transform-origin: left center;
+      animation: flagWave 3.5s ease-in-out infinite;
+    }
+    .flag-stripes {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(
+        180deg,
+        #CC2936 0px, #CC2936 6.46px,
+        #fff    6.46px, #fff    12.92px
+      );
+    }
+    .flag-canton {
+      position: absolute; top: 0; left: 0;
+      width: 53%; height: 53.8%;
+      background: #002868;
+      display: flex; flex-wrap: wrap;
+      align-items: center; justify-content: space-around;
+      padding: 3px 4px;
+    }
+    .flag-canton span { color: #fff; font-size: 5.5px; line-height: 1; flex: 0 0 16.66%; text-align: center; }
+    @keyframes flagWave {
+      0%,100% { clip-path: polygon(0 0, 100% 2%, 100% 98%, 0 100%); }
+      25%      { clip-path: polygon(0 1%, 96% 0, 100% 100%, 0 99%); }
+      50%      { clip-path: polygon(0 0, 100% 3%, 97% 97%, 0 100%); }
+      75%      { clip-path: polygon(0 2%, 100% 0, 99% 99%, 0 98%); }
+    }
+
+    /* ====================================================
+       TREES  — FIX: explicit height + bottom positioning
+       Ground line ≈ 46% from scene bottom
+    ==================================================== */
+    .tree-group {
+      position: absolute;
+      height: 210px;       /* explicit so bottom: works correctly */
+      width: 90px;
+      pointer-events: none;
+    }
+    /* Large trees anchored to ground */
+    #tg-l1 { bottom: 46%; left: 0%;   z-index: 5; }
+    #tg-r1 { bottom: 46%; right: 0%;  z-index: 5; transform: scaleX(-1); }
+    /* Medium trees */
+    #tg-l2 { bottom: 46%; left: 17%;  z-index: 4;
+      transform: scale(0.68); transform-origin: bottom left; }
+    #tg-r2 { bottom: 46%; right: 17%; z-index: 4;
+      transform: scale(0.68) scaleX(-1); transform-origin: bottom right; }
+    /* Small background trees */
+    #tg-l3 { bottom: 46%; left: 31%;  z-index: 3;
+      transform: scale(0.50); transform-origin: bottom left; opacity: 0.82; }
+    #tg-r3 { bottom: 46%; right: 30%; z-index: 3;
+      transform: scale(0.50) scaleX(-1); transform-origin: bottom right; opacity: 0.82; }
+
+    /* Canopy layers */
+    .t-back {
+      position: absolute; width: 72px; height: 64px;
+      background: radial-gradient(ellipse at 45% 55%, #265a14, #1a400d);
+      border-radius: 50% 45% 50% 48%;
+      top: 22px; left: 5px;
+    }
+    .t-mid {
+      position: absolute; width: 82px; height: 72px;
+      background: radial-gradient(ellipse at 42% 48%, #32721c, #245410);
+      border-radius: 48% 50% 45% 50%;
+      top: 10px; left: 0;
+    }
+    .t-front {
+      position: absolute; width: 66px; height: 64px;
+      background: radial-gradient(ellipse at 45% 42%, #428e26, #307018);
+      border-radius: 50% 50% 42% 46%;
+      top: 0; left: 14px;
+    }
+    /* Trunk — height fills from top:60 to bottom of 210px container = 150px */
+    .t-trunk {
+      position: absolute;
+      width: 16px; height: 150px;
+      background: linear-gradient(to right, #6a4525, #9a6840, #6a4525);
+      border-radius: 4px 4px 3px 3px;
+      left: 32px; top: 60px;
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+    }
+
+    /* ====================================================
+       BUSHES
+    ==================================================== */
+    #bush-l  { position: absolute; bottom: 40%; left: 0;    width: 130px; height: 72px; pointer-events: none; z-index: 6; }
+    #bush-r  { position: absolute; bottom: 40%; right: 0;   width: 148px; height: 76px; pointer-events: none; z-index: 6; }
+    #bush-cl { position: absolute; bottom: 38%; left: 22%;  width: 110px; height: 56px; pointer-events: none; z-index: 6; }
+    #bush-cr { position: absolute; bottom: 38%; right: 22%; width: 110px; height: 56px; pointer-events: none; z-index: 6; }
+    .b-blob  { position: absolute; border-radius: 50%; box-shadow: inset -2px -2px 6px rgba(0,0,0,0.12); }
+    .bb1 { width: 68px; height: 58px; left: 0;    top: 14px; background: radial-gradient(ellipse at 45% 50%, #46ae26, #2e7c16); }
+    .bb2 { width: 60px; height: 52px; left: 40px; top: 4px;  background: radial-gradient(ellipse at 42% 42%, #4eba2e, #388c1e); }
+    .bb3 { width: 52px; height: 46px; left: 76px; top: 18px; background: radial-gradient(ellipse at 48% 48%, #46a826, #2e7a14); }
+
+    /* ====================================================
+       PICNIC TABLE  — wooden, no tablecloth
+       table-group: explicit 200px height so food-item
+       children with negative top sit properly on surface
+    ==================================================== */
+    #table-group {
+      position: absolute;
+      bottom: 20%;
+      left: 50%; transform: translateX(-50%);
+      width: 380px;
+      height: 200px;   /* explicit — food items use absolute pos inside */
+      z-index: 7;
+    }
+
+    /* ── table visual elements: pointer-events off ── */
+    .tbl-top {
+      position: absolute; top: 0; left: 0;
+      width: 380px; height: 72px;
+      border-radius: 6px 6px 4px 4px;
+      overflow: hidden;
+      pointer-events: none;
+      box-shadow: 0 5px 18px rgba(0,0,0,0.45), inset 0 2px 0 rgba(255,255,255,0.12);
+      /* Wood with horizontal lines only */
+      background:
+        repeating-linear-gradient(180deg,
+          transparent 0px, transparent 14px,
+          rgba(0,0,0,0.12) 14px, rgba(0,0,0,0.12) 16px
+        ),
+        linear-gradient(180deg, #c89450 0%, #a87438 30%, #905c28 60%, #a87438 100%);
+    }
+    /* Grain lines */
+    .tbl-top::before {
+      content: ''; position: absolute; inset: 0;
+      background: repeating-linear-gradient(180deg,
+        transparent 0px, transparent 11px,
+        rgba(0,0,0,0.05) 11px, rgba(0,0,0,0.05) 12px,
+        transparent 12px, transparent 25px,
+        rgba(0,0,0,0.03) 25px, rgba(0,0,0,0.03) 26px
+      );
+    }
+    /* Edge shadow below surface */
+    .tbl-top::after {
+      content: ''; position: absolute;
+      bottom: -7px; left: 5px; right: 5px; height: 8px;
+      background: linear-gradient(180deg, #804e20, #5e3010);
+      border-radius: 0 0 4px 4px;
+    }
+    .tbl-legs {
+      position: absolute; top: 72px; left: 0;
+      display: flex; justify-content: space-between; padding: 0 24px;
+      width: 380px; pointer-events: none;
+    }
+    .tbl-leg {
+      width: 13px; height: 56px;
+      background: linear-gradient(90deg, #7a4828, #9a6438, #7a4828);
+      border-radius: 3px; box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
+    }
+    .tbl-leg:first-child { transform: rotate(5deg);  transform-origin: top center; }
+    .tbl-leg:last-child  { transform: rotate(-5deg); transform-origin: top center; }
+    .tbl-brace {
+      position: absolute; top: 104px;
+      left: 50%; transform: translateX(-50%);
+      width: 240px; height: 9px;
+      background: linear-gradient(180deg, #8a5830, #6a3c18);
+      border-radius: 3px; pointer-events: none;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+    }
+    .tbl-bench {
+      position: absolute; top: 132px;
+      left: 50%; transform: translateX(-50%);
+      width: 420px; height: 15px;
+      background:
+        repeating-linear-gradient(90deg,
+          transparent 0px, transparent 50px,
+          rgba(0,0,0,0.07) 50px, rgba(0,0,0,0.07) 52px
+        ),
+        linear-gradient(180deg, #a87030, #884e20);
+      border-radius: 4px; pointer-events: none;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.10);
+    }
+
+    /* ====================================================
+       FOOD ITEMS  — absolute children of #table-group
+       top: -58px places item bottom AT the table surface
+       (table surface is at y=0 of table-group)
+    ==================================================== */
+    .food-item {
+      position: absolute;
+      cursor: pointer;
+      z-index: 11;
+      touch-action: manipulation;
+      transition: transform 0.14s ease, filter 0.14s;
+    }
+    .food-item:hover  { transform: scale(1.22) translateY(-5px); filter: drop-shadow(0 6px 14px rgba(0,0,0,0.6)); }
+    .food-item:active { transform: scale(0.93); }
+
+    .fi-inner { display: flex; flex-direction: column; align-items: center; }
+    .fi-icon  {
+      width: 42px; height: 46px;
+      display: flex; align-items: center; justify-content: center;
+      filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55));
+    }
+    .fi-label {
+      font-size: 8.5px; font-weight: 900; color: #fff;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.95);
+      white-space: nowrap; letter-spacing: 0.3px; margin-top: 2px;
+    }
+
+    /* Spread naturally across table, anchored to table surface */
+    #fi-drink   { left: 8px;   top: -30px; }
+    #fi-ketchup { left: 52px;  top: -30px; }
+    #fi-fruit   { left: 130px; top: 2px; }
+    #fi-hotdog  { left: 98px;  top: -36px; }
+    #fi-burger  { left: 168px; top: -32px; }
+    #fi-cake    { left: 252px; top: -38px; }
+    #fi-mustard { left: 288px; top: -20px; }
+    #fi-chips   { left: 208px; top: -18px; }
+    #fi-napkins { left: 328px; top: -34px; }
+
+    /* Pack-into-basket animation */
+    .food-item.collected {
+      animation: packFly 0.48s ease forwards;
+      pointer-events: none;
+    }
+    @keyframes packFly {
+      0%   { opacity: 1; transform: scale(1); }
+      35%  { transform: scale(1.4) translateY(-24px); opacity: 0.9; }
+      100% { opacity: 0; transform: scale(0.08) translateY(80px); }
+    }
+
+    /* ====================================================
+       BASKET  — bottom center, same HTML as Easter Hunt
+    ==================================================== */
+    #basket-wrapper {
+      position: absolute; bottom: 4.5%; left: 50%;
+      transform: translateX(-50%);
+      z-index: 15; cursor: pointer; touch-action: manipulation;
+    }
+    #basket { position: relative; width: 112px; }
+    .basket-handle {
+      position: absolute; width: 74px; height: 34px;
+      border: 6px solid #9A5C20; border-bottom: none;
+      border-radius: 50% 50% 0 0; top: -28px; left: 19px;
+    }
+    .basket-body {
+      position: relative; width: 112px; height: 80px;
+      background:
+        repeating-linear-gradient(0deg,   transparent, transparent 9px, rgba(0,0,0,0.09) 9px, rgba(0,0,0,0.09) 11px),
+        repeating-linear-gradient(90deg,  transparent, transparent 9px, rgba(0,0,0,0.07) 9px, rgba(0,0,0,0.07) 11px),
+        linear-gradient(to bottom, #D4922A, #BA7018, #A06012);
+      border-radius: 8px 8px 24px 24px; overflow: hidden;
+      box-shadow: 0 5px 14px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.1);
+    }
+    .basket-rim {
+      position: absolute; top: 0; left: 0; width: 112px; height: 14px;
+      background: linear-gradient(to bottom, #E8B050, #C8841E);
+      border-radius: 6px 6px 0 0; z-index: 2;
+    }
+    #basket-count {
+      position: absolute; top: -10px; right: -16px;
+      background: #CC0000; color: white;
+      font-size: 12px; font-weight: 900;
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      border: 2.5px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      opacity: 0; transform: scale(0);
+      transition: opacity 0.3s, transform 0.3s; z-index: 10;
+    }
+    #basket-count.show { opacity: 1; transform: scale(1); }
+    #tap-counter {
+      position: absolute; top: -48px; left: 50%;
+      transform: translateX(-50%) scale(0.8);
+      background: rgba(20,20,20,0.82); backdrop-filter: blur(4px);
+      color: #FFD700; font-size: 18px; font-weight: 900;
+      padding: 4px 14px; border-radius: 14px;
+      white-space: nowrap; opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none; z-index: 20;
+    }
+    #tap-counter.show { opacity: 1; transform: translateX(-50%) scale(1); }
+    @keyframes basketShake {
+      0%,100% { transform: translateX(-50%) rotate(0); }
+      10% { transform: translateX(calc(-50% - 9px)) rotate(-6deg); }
+      20% { transform: translateX(calc(-50% + 9px)) rotate(6deg); }
+      30% { transform: translateX(calc(-50% - 7px)) rotate(-4deg); }
+      40% { transform: translateX(calc(-50% + 7px)) rotate(4deg); }
+      50% { transform: translateX(calc(-50% - 4px)) rotate(-2deg); }
+      60% { transform: translateX(calc(-50% + 4px)) rotate(2deg); }
+      70% { transform: translateX(calc(-50% - 1px)) rotate(-1deg); }
+    }
+    @keyframes basketGlow {
+      0%,100% { filter: none; }
+      50% { filter: drop-shadow(0 0 18px rgba(255,215,0,0.9)); }
+    }
+    .basket-shaking { animation: basketShake 0.85s cubic-bezier(0.36,0.07,0.19,0.97) forwards, basketGlow 1s ease-in-out; }
+
+    /* ====================================================
+       HEADER BANNER  (exact Easter Hunt style)
+    ==================================================== */
+    #game-headline {
+      position: absolute; top: 0; left: 0; right: 0;
+      background: linear-gradient(135deg, #CC0000 0%, #A00000 100%);
+      display: flex; align-items: center; justify-content: center;
+      padding: 9px 16px 8px; z-index: 30; pointer-events: none;
+      border-bottom: 2px solid rgba(255,255,255,0.15);
+      box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+    }
+    #headline-text {
+      color: #fff; font-size: 13px; font-weight: 900;
+      letter-spacing: 1.2px; text-transform: uppercase;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.4); white-space: nowrap;
+    }
+
+    /* ====================================================
+       MFO LOGO  (exact Easter Hunt position)
+    ==================================================== */
+    #mfo-logo {
+      position: absolute; top: 52px; left: 50%;
+      transform: translateX(-50%);
+      height: 120px; width: auto;
+      filter: brightness(0) invert(1) drop-shadow(0 2px 8px rgba(0,0,0,0.4));
+      z-index: 28; pointer-events: none;
+    }
+
+    /* ====================================================
+       INSTRUCTIONS PILL
+    ==================================================== */
+    #game-instructions {
+      position: absolute; top: 21%; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      padding: 7px 18px; border-radius: 22px;
+      font-size: 13px; font-weight: 700; color: #1a1a1a;
+      white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+      z-index: 25; pointer-events: none; transition: all 0.4s ease;
+    }
+
+    /* ====================================================
+       PRIZE OVERLAY  — exact copy of Easter Egg Hunt card
+    ==================================================== */
+    #prize-overlay {
+      position: absolute; inset: 0;
+      background: rgba(10,10,20,0.72); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      animation: overlayIn 0.35s ease;
+    }
+    #prize-overlay.hidden { display: none; }
+    @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+
+    #prize-card {
+      position: relative; background: #111111;
+      border-radius: 22px; padding: 26px 28px 22px;
+      width: 92%; max-width: 420px; max-height: 90%;
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      z-index: 1001;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 0 2px #CC0000;
+      animation: cardPop 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      text-align: center;
+    }
+    @keyframes cardPop {
+      0%   { transform: scale(0.25) translateY(60px); opacity: 0; }
+      100% { transform: scale(1)    translateY(0);    opacity: 1; }
+    }
+    .prize-tag {
+      display: inline-block; background: #CC0000; border: 2px solid #FF3333;
+      color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 0.4px;
+      padding: 5px 13px; border-radius: 30px; text-transform: uppercase; margin-bottom: 10px;
+    }
+    .prize-jackpot  { font-size: 32px; font-weight: 900; color: #fff; margin: 6px 0 4px; line-height: 1.2; text-transform: uppercase; letter-spacing: 1px; }
+    .prize-title    { font-size: 17px; font-weight: 900; color: #fff; line-height: 1.25; margin: 10px 0 2px; text-transform: uppercase; letter-spacing: 0.8px; }
+    .prize-price    { font-size: 36px; font-weight: 900; color: #CC0000; margin: 4px 0 1px; line-height: 1; }
+    .prize-original { font-size: 14px; color: #888; text-decoration: line-through; margin-bottom: 12px; }
+    .prize-urgency  {
+      background: #1A1A1A; border: 1.5px solid #CC0000; border-radius: 10px;
+      padding: 9px 13px; font-size: 12px; font-weight: 700; color: #fff; margin: 10px 0; line-height: 1.4;
+    }
+    .prize-body     { font-size: 13.5px; color: #ccc; line-height: 1.55; margin: 10px 0 14px; }
+    #claim-btn {
+      display: block; width: 100%; padding: 17px 16px;
+      background: #CC0000; color: white;
+      font-size: 14px; font-weight: 900;
+      text-decoration: none; border-radius: 13px; margin-bottom: 10px;
+      box-shadow: 0 5px 18px rgba(204,0,0,0.5);
+      text-transform: uppercase; letter-spacing: 0.6px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: none; cursor: pointer; -webkit-appearance: none; line-height: 1.2;
+    }
+    #claim-btn:hover, #claim-btn:active {
+      transform: translateY(-2px); background: #AA0000;
+      box-shadow: 0 8px 22px rgba(204,0,0,0.65);
+    }
+    .prize-fine-print { font-size: 11px; color: #888; line-height: 1.6; }
+
+    /* ====================================================
+       CONFETTI
+    ==================================================== */
+    #confetti-container { position: absolute; inset: 0; pointer-events: none; z-index: 999; overflow: hidden; }
+    .confetti-piece { position: absolute; top: -24px; animation: confettiFall linear forwards; }
+    @keyframes confettiFall {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+      60%  { opacity: 1; }
+      100% { transform: translateY(115vh) rotate(720deg); opacity: 0; }
+    }
+
+    /* ====================================================
+       ALREADY PLAYED SCREEN
+    ==================================================== */
+    #already-played {
+      position: fixed; inset: 0;
+      background: linear-gradient(145deg, #0a1a3e 0%, #1a3060 40%, #2a4a8a 100%);
+      display: flex; align-items: center; justify-content: center; z-index: 2000;
+    }
+    #already-played.hidden { display: none; }
+    .ap-card {
+      background: white; border-radius: 22px; padding: 44px 30px;
+      max-width: 310px; width: 88%; text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+    .ap-card .ap-emoji { font-size: 60px; display: block; margin-bottom: 18px; }
+    .ap-card h2 { font-size: 23px; font-weight: 900; color: #111827; margin-bottom: 12px; }
+    .ap-card p  { font-size: 14px; color: #6B7280; line-height: 1.65; margin-bottom: 22px; }
+    .ap-link {
+      display: inline-block; background: linear-gradient(135deg, #CC0000, #990000);
+      color: white; font-size: 14px; font-weight: 700;
+      padding: 13px 26px; border-radius: 11px; text-decoration: none;
+      box-shadow: 0 4px 14px rgba(204,0,0,0.35);
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ALREADY PLAYED -->
+<div id="already-played" class="hidden">
+  <div class="ap-card">
+    <span class="ap-emoji">🇺🇸</span>
+    <h2>Thanks for playing!</h2>
+    <p>You've already packed your picnic!<br>Check your email for the details.</p>
+    <a href="https://mikeferry.com" class="ap-link">Return to MFO →</a>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game-wrapper">
+  <div id="scene">
+
+    <canvas id="fw-canvas"></canvas>
+
+    <!-- Header -->
+    <div id="game-headline">
+      <span id="headline-text">🇺🇸 Pack the Picnic — Win a Prize! 🇺🇸</span>
+    </div>
+
+    <!-- MFO Logo -->
+    <img src="White Logo.png" alt="Mike Ferry Organization" id="mfo-logo">
+
+    <!-- Instructions -->
+    <div id="game-instructions">🍔 Tap the food to pack your basket!</div>
+
+    <!-- Clouds -->
+    <div class="cloud cloud-a"></div>
+    <div class="cloud cloud-b"></div>
+    <div class="cloud cloud-c"></div>
+
+    <!-- FLAG -->
+    <div id="flag-group">
+      <div id="pole-star">★</div>
+      <div id="flagpole">
+        <div id="flag">
+          <div class="flag-stripes"></div>
+          <div class="flag-canton">
+            <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+            <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+            <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+            <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+            <span>★</span><span>★</span><span>★</span><span>★</span><span>★</span><span>★</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TREES (6 total, all grounded via bottom: 46%) -->
+    <div class="tree-group" id="tg-l1"><div class="t-back"></div><div class="t-mid"></div><div class="t-front"></div><div class="t-trunk"></div></div>
+    <div class="tree-group" id="tg-r1"><div class="t-back"></div><div class="t-mid"></div><div class="t-front"></div><div class="t-trunk"></div></div>
+    <div class="tree-group" id="tg-l2"><div class="t-back"></div><div class="t-mid"></div><div class="t-front"></div><div class="t-trunk"></div></div>
+    <div class="tree-group" id="tg-r2"><div class="t-back"></div><div class="t-mid"></div><div class="t-front"></div><div class="t-trunk"></div></div>
+    <div class="tree-group" id="tg-l3"><div class="t-back"></div><div class="t-mid"></div><div class="t-front"></div><div class="t-trunk"></div></div>
+    <div class="tree-group" id="tg-r3"><div class="t-back"></div><div class="t-mid"></div><div class="t-front"></div><div class="t-trunk"></div></div>
+
+    <!-- BUSHES -->
+    <div id="bush-l"><div class="b-blob bb1"></div><div class="b-blob bb2"></div><div class="b-blob bb3"></div></div>
+    <div id="bush-r"><div class="b-blob bb1"></div><div class="b-blob bb2"></div><div class="b-blob bb3"></div></div>
+    <div id="bush-cl"><div class="b-blob bb1"></div><div class="b-blob bb2"></div><div class="b-blob bb3"></div></div>
+    <div id="bush-cr"><div class="b-blob bb1"></div><div class="b-blob bb2"></div><div class="b-blob bb3"></div></div>
+
+    <!-- WOODEN PICNIC TABLE + FOOD ITEMS (food is inside table-group) -->
+    <div id="table-group">
+
+      <!-- Table structure (pointer-events: none on each element) -->
+      <div class="tbl-top"></div>
+      <div class="tbl-legs"><div class="tbl-leg"></div><div class="tbl-leg"></div></div>
+      <div class="tbl-brace"></div>
+      <div class="tbl-bench"></div>
+
+      <!-- FOOD ITEMS — top: -58px sits each item ON the table surface -->
+
+      <!-- Drink -->
+      <div class="food-item" id="fi-drink"
+           onclick="collectItem('fi-drink')" ontouchend="onFT(event,'fi-drink')">
+        <div class="fi-inner">
+          <div class="fi-icon">
+            <svg width="40" height="46" viewBox="0 0 40 46">
+              <path d="M8 15 L10 42 L30 42 L32 15 Z" fill="#d8f0ff"/>
+              <path d="M8 15 L10 42 L30 42 L32 15 Z" fill="rgba(20,80,180,0.22)"/>
+              <path d="M9 20 L10 42 L30 42 L31 20 Z" fill="rgba(60,20,5,0.60)"/>
+              <rect x="13" y="24" width="6" height="6" rx="1" fill="rgba(200,230,255,0.7)"/>
+              <rect x="21" y="26" width="5" height="5" rx="1" fill="rgba(200,230,255,0.6)"/>
+              <path d="M6 15 Q20 12 34 15 L33 18 Q20 15 7 18 Z" fill="#b8d8f0"/>
+              <ellipse cx="20" cy="13" rx="14" ry="3.5" fill="#d0e8ff"/>
+              <ellipse cx="25" cy="12" rx="2" ry="1.4" fill="#a8c8e0"/>
+              <rect x="24" y="2"  width="3" height="17" rx="1.5" fill="#e03838" opacity="0.9"/>
+              <rect x="24.5" y="2" width="2" height="17" rx="1" fill="#fff" opacity="0.5"/>
+              <rect x="11" y="17" width="3" height="13" rx="1.5" fill="rgba(255,255,255,0.22)"/>
+            </svg>
+          </div>
+          <div class="fi-label">DRINK</div>
+        </div>
+      </div>
+
+      <!-- Ketchup -->
+      <div class="food-item" id="fi-ketchup"
+           onclick="collectItem('fi-ketchup')" ontouchend="onFT(event,'fi-ketchup')">
+        <div class="fi-inner">
+          <div class="fi-icon">
+            <svg width="34" height="46" viewBox="0 0 34 46">
+              <rect x="7"  y="15" width="20" height="26" rx="6" fill="#cc2020"/>
+              <rect x="7"  y="15" width="20" height="13" rx="6" fill="#dd3030"/>
+              <rect x="11" y="9"  width="12" height="8"  rx="3" fill="#bb1818"/>
+              <rect x="10" y="6"  width="14" height="5"  rx="2" fill="#999"/>
+              <rect x="9"  y="22" width="16" height="11" rx="3" fill="rgba(255,255,255,0.15)"/>
+              <rect x="9"  y="16" width="4"  height="9"  rx="2" fill="rgba(255,255,255,0.22)"/>
+            </svg>
+          </div>
+          <div class="fi-label">KETCHUP</div>
+        </div>
+      </div>
+
+      <!-- Fruit (watermelon) -->
+      <div class="food-item" id="fi-fruit"
+           onclick="collectItem('fi-fruit')" ontouchend="onFT(event,'fi-fruit')">
+        <div class="fi-inner">
+          <div class="fi-icon">
+            <svg width="42" height="46" viewBox="0 0 42 46">
+              <path d="M4 32 A19 19 0 0 1 38 32 Z" fill="#4a9a28"/>
+              <path d="M6 32 A17 17 0 0 1 36 32 Z" fill="#7ac848"/>
+              <path d="M7 32 A16 16 0 0 1 35 32 Z" fill="#f0f8e8"/>
+              <path d="M8 32 A15 15 0 0 1 34 32 Z" fill="#f83838"/>
+              <ellipse cx="16" cy="28" rx="1.4" ry="2.4" fill="#111" transform="rotate(-10,16,28)"/>
+              <ellipse cx="21" cy="26" rx="1.4" ry="2.4" fill="#111"/>
+              <ellipse cx="26" cy="28" rx="1.4" ry="2.4" fill="#111" transform="rotate(10,26,28)"/>
+              <ellipse cx="13" cy="30.5" rx="1.2" ry="1.8" fill="#111" transform="rotate(-15,13,30.5)"/>
+              <ellipse cx="29" cy="30.5" rx="1.2" ry="1.8" fill="#111" transform="rotate(15,29,30.5)"/>
+            </svg>
+          </div>
+          <div class="fi-label">FRUIT</div>
+        </div>
+      </div>
+
+      <!-- Hot Dog -->
+      <div class="food-item" id="fi-hotdog"
+           onclick="collectItem('fi-hotdog')" ontouchend="onFT(event,'fi-hotdog')">
+        <div class="fi-inner">
+          <div class="fi-icon">
+            <svg width="42" height="46" viewBox="0 0 42 46">
+              <ellipse cx="21" cy="32" rx="17" ry="8" fill="#e8a030"/>
+              <rect x="4" y="24" width="34" height="8" fill="#f0b040"/>
+              <ellipse cx="21" cy="24" rx="17" ry="9" fill="#f0b040"/>
+              <ellipse cx="21" cy="22" rx="16" ry="7" fill="#f8c868"/>
+              <rect x="3" y="21" width="36" height="9" rx="4.5" fill="#c83828"/>
+              <rect x="3" y="21" width="36" height="4"  rx="4.5" fill="#d84838"/>
+              <path d="M7 25 Q13 23 19 25 Q25 27 31 25 Q36 23 39 25" stroke="#f0c020" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="fi-label">HOT DOG</div>
+        </div>
+      </div>
+
+      <!-- Burger -->
+      <div class="food-item" id="fi-burger"
+           onclick="collectItem('fi-burger')" ontouchend="onFT(event,'fi-burger')">
+        <div class="fi-inner">
+          <div class="fi-icon">
+            <svg width="42" height="46" viewBox="0 0 42 46">
+              <ellipse cx="21" cy="12" rx="16" ry="7.5" fill="#e8a030"/>
+              <ellipse cx="21" cy="9.5" rx="16" ry="6.5" fill="#f0b040"/>
+              <ellipse cx="21" cy="8.5" rx="14" ry="5" fill="#f8c868"/>
+              <ellipse cx="16" cy="7.5" rx="1.8" ry="1.1" fill="#d09020" transform="rotate(-20,16,7.5)"/>
+              <ellipse cx="23" cy="6.5" rx="1.8" ry="1.1" fill="#d09020" transform="rotate(10,23,6.5)"/>
+              <ellipse cx="28" cy="8"   rx="1.6" ry="1"   fill="#d09020" transform="rotate(-5,28,8)"/>
+              <path d="M5 19 Q8 16 12 18 Q16 15 20 18 Q24 16 28 18 Q32 15 37 18 Q39 19 39 21 L5 21Z" fill="#58c830"/>
+              <rect x="5" y="21" width="32" height="4" rx="1" fill="#e03838"/>
+              <rect x="5" y="25" width="32" height="3" rx="1" fill="#f0c030"/>
+              <rect x="6" y="28" width="30" height="7" rx="3" fill="#6b3010"/>
+              <rect x="6" y="28" width="30" height="3" rx="2" fill="#7a3818"/>
+              <ellipse cx="21" cy="37" rx="16" ry="5.5" fill="#e8a030"/>
+              <ellipse cx="21" cy="36" rx="16" ry="4.5" fill="#f0b040"/>
+            </svg>
+          </div>
+          <div class="fi-label">BURGER</div>
+        </div>
+      </div>
+
+      <!-- Cake -->
+      <div class="food-item" id="fi-cake"
+           onclick="collectItem('fi-cake')" ontouchend="onFT(event,'fi-cake')">
+        <div class="fi-inner">
+          <div class="fi-icon">
+            <svg width="40" height="46" viewBox="0 0 40 46">
+              <ellipse cx="20" cy="41" rx="17" ry="4" fill="#e0e0e0"/>
+              <rect x="7"  y="28" width="26" height="11" rx="2" fill="#f5f0e8"/>
+              <rect x="7"  y="32" width="26" height="3"  fill="#e85070"/>
+              <rect x="7"  y="19" width="26" height="10" rx="2" fill="#f5f0e8"/>
+              <rect x="7"  y="23" width="26" height="3"  fill="#e85070"/>
+              <rect x="7"  y="12" width="26" height="8"  rx="3" fill="#fff8f8"/>
+              <path d="M7 18 Q10 22 13 18 Q16 22 19 18 Q22 22 25 18 Q28 22 31 18 Q33 20 33 20 L7 20Z" fill="white"/>
+              <rect x="13" y="6"  width="4" height="7" rx="1" fill="#f0f0f0"/>
+              <rect x="13" y="6"  width="4" height="2" rx="1" fill="#CC2936"/>
+              <rect x="13" y="8"  width="4" height="2"         fill="#fff"/>
+              <rect x="13" y="10" width="4" height="2"         fill="#002868"/>
+              <ellipse cx="15" cy="5" rx="1.4" ry="2.2" fill="#f5c030" opacity="0.9"/>
+              <rect x="23" y="6"  width="4" height="7" rx="1" fill="#f0f0f0"/>
+              <rect x="23" y="6"  width="4" height="2" rx="1" fill="#CC2936"/>
+              <rect x="23" y="8"  width="4" height="2"         fill="#fff"/>
+              <rect x="23" y="10" width="4" height="2"         fill="#002868"/>
+              <ellipse cx="25" cy="5" rx="1.4" ry="2.2" fill="#f5c030" opacity="0.9"/>
+              <text x="9"  y="17" font-size="5" fill="#CC2936">★</text>
+              <text x="28" y="17" font-size="5" fill="#002868">★</text>
+            </svg>
+          </div>
+          <div class="fi-label">CAKE</div>
+        </div>
+      </div>
+
+      <!-- Mustard -->
+      <div class="food-item" id="fi-mustard"
+           onclick="collectItem('fi-mustard')" ontouchend="onFT(event,'fi-mustard')">
+        <div class="fi-inner">
+          <div class="fi-icon">
+            <svg width="34" height="46" viewBox="0 0 34 46">
+              <rect x="7"  y="15" width="20" height="26" rx="6" fill="#d4b020"/>
+              <rect x="7"  y="15" width="20" height="13" rx="6" fill="#e8c828"/>
+              <rect x="11" y="9"  width="12" height="8"  rx="3" fill="#c0a010"/>
+              <rect x="10" y="6"  width="14" height="5"  rx="2" fill="#cc2020"/>
+              <rect x="9"  y="22" width="16" height="11" rx="3" fill="rgba(255,255,255,0.15)"/>
+              <rect x="9"  y="16" width="4"  height="9"  rx="2" fill="rgba(255,255,255,0.22)"/>
+            </svg>
+          </div>
+          <div class="fi-label">MUSTARD</div>
+        </div>
+      </div>
+
+      <!-- Chips -->
+      <div class="food-item" id="fi-chips"
+           onclick="collectItem('fi-chips')" ontouchend="onFT(event,'fi-chips')">
+        <div class="fi-inner">
+          <div class="fi-icon">
+            <svg width="38" height="46" viewBox="0 0 38 46">
+              <path d="M8 11 Q9 7 19 6 Q29 7 30 11 L32 36 Q31 41 19 41 Q7 41 6 36 Z" fill="#e88020"/>
+              <path d="M8 11 Q9 7 19 6 Q29 7 30 11 L30 20 Q29 13 19 12 Q9 13 8 20 Z" fill="#f09030"/>
+              <path d="M10 11 Q15 8 19 7 Q23 8 28 11 Q24 15 19 14 Q14 15 10 11 Z" fill="#f4a040"/>
+              <ellipse cx="16" cy="25" rx="4.5" ry="3" fill="#f4c050" transform="rotate(-15,16,25)"/>
+              <ellipse cx="23" cy="23" rx="4.5" ry="3" fill="#f4c050" transform="rotate(10,23,23)"/>
+              <ellipse cx="19" cy="31" rx="4.5" ry="3" fill="#f4c050" transform="rotate(-5,19,31)"/>
+              <rect x="6"  y="21" width="26" height="5" rx="2" fill="rgba(200,30,30,0.3)"/>
+              <rect x="10" y="13" width="4"  height="13" rx="2" fill="rgba(255,255,255,0.18)" transform="rotate(-5,12,19.5)"/>
+            </svg>
+          </div>
+          <div class="fi-label">CHIPS</div>
+        </div>
+      </div>
+
+      <!-- Napkins -->
+      <div class="food-item" id="fi-napkins"
+           onclick="collectItem('fi-napkins')" ontouchend="onFT(event,'fi-napkins')">
+        <div class="fi-inner">
+          <div class="fi-icon">
+            <svg width="38" height="46" viewBox="0 0 38 46">
+              <rect x="5"  y="28" width="28" height="10" rx="2" fill="#d0d0d0"/>
+              <rect x="5"  y="24" width="28" height="10" rx="2" fill="#e0e0e0"/>
+              <rect x="5"  y="20" width="28" height="10" rx="2" fill="#eeeeee"/>
+              <rect x="5"  y="16" width="28" height="10" rx="2" fill="#ffffff"/>
+              <rect x="5"  y="16" width="28" height="3"  rx="2" fill="#CC2936" opacity="0.75"/>
+              <rect x="5"  y="19" width="28" height="2"  rx="1" fill="#002868" opacity="0.55"/>
+              <rect x="5"  y="21" width="28" height="2"  rx="1" fill="#CC2936" opacity="0.4"/>
+              <line x1="19" y1="16" x2="19" y2="26" stroke="#ddd" stroke-width="0.8"/>
+              <line x1="5"  y1="21" x2="33" y2="21" stroke="#ddd" stroke-width="0.8"/>
+              <path d="M5 16 L13 16 L5 22 Z" fill="rgba(200,200,200,0.5)"/>
+            </svg>
+          </div>
+          <div class="fi-label">NAPKINS</div>
+        </div>
+      </div>
+
+    </div><!-- /table-group -->
+
+    <!-- BASKET (bottom center) -->
+    <div id="basket-wrapper" onclick="onBasketClick()" ontouchend="onBasketTouch(event)">
+      <div id="basket">
+        <div class="basket-handle"></div>
+        <div class="basket-body"></div>
+        <div class="basket-rim"></div>
+        <div id="basket-count"></div>
+        <div id="tap-counter"></div>
+      </div>
+    </div>
+
+  </div><!-- /scene -->
+</div><!-- /game-wrapper -->
+
+<!-- PRIZE MODAL (exact Easter Hunt style) -->
+<div id="prize-overlay" class="hidden">
+  <div id="confetti-container"></div>
+  <div id="prize-card">
+    <div class="prize-tag">SAVE UP TO $500 &nbsp;·&nbsp; Up to 2 Tickets · $250 Each</div>
+    <div class="prize-jackpot">🇺🇸 MEMORIAL DAY SPECIAL</div>
+    <div class="prize-title">West Coast Superstar Retreat Tickets</div>
+    <div class="prize-price">ONLY $250 EACH</div>
+    <div class="prize-original">Normally $750 per ticket</div>
+    <div class="prize-urgency">🇺🇸 Have a Safe Memorial Day 🇺🇸</div>
+    <div class="prize-body">Join top performers at the West Coast Superstar Retreat this summer for networking, learning, and celebration.</div>
+    <a id="claim-btn" href="https://45810950.hs-sites.com/hs/payments/nNVtwYQmvCV?referrer=PAYMENT_LINK"
+       target="_blank" rel="noopener noreferrer" onclick="markPlayed()">
+      CLAIM MY $250 TICKETS NOW →
+    </a>
+    <div class="prize-fine-print">
+      West Coast Superstar Retreat &nbsp;·&nbsp; June 2–5 &nbsp;·&nbsp; San Diego<br>
+      Up to 2 discounted tickets per person.
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ── STATE ── */
+  const TOTAL = 9;
+  const collected = new Set();
+  let basketTaps = 0, tapTimer = null, gameWon = false, audioCtx = null;
+
+  /* ── SCALING — same pattern as Easter Hunt ── */
+  function scaleScene() {
+    const s = document.getElementById('scene');
+    const sc = Math.min(window.innerWidth / 480, window.innerHeight / 853);
+    s.style.transform = `scale(${sc})`;
+  }
+  scaleScene();
+  window.addEventListener('resize', scaleScene);
+
+  /* ── STARS ── */
+  (function() {
+    const scene = document.getElementById('scene');
+    for (let i = 0; i < 60; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      const sz = 1 + Math.random() * 2.2;
+      s.style.cssText = `width:${sz}px;height:${sz}px;top:${(Math.random()*50).toFixed(1)}%;left:${(Math.random()*100).toFixed(1)}%;animation-delay:${(Math.random()*3).toFixed(2)}s;animation-duration:${(1.4+Math.random()*2.2).toFixed(2)}s;`;
+      scene.insertBefore(s, scene.firstChild);
+    }
+  })();
+
+  /* ── FIREWORKS ── */
+  const fwCv  = document.getElementById('fw-canvas');
+  const fwCtx = fwCv.getContext('2d');
+
+  class FWP {
+    constructor(x,y,col){
+      this.x=x;this.y=y;this.col=col;
+      const a=Math.random()*Math.PI*2,sp=1+Math.random()*3.2;
+      this.vx=Math.cos(a)*sp;this.vy=Math.sin(a)*sp;
+      this.life=1;this.decay=0.011+Math.random()*0.018;this.r=1.5+Math.random()*2;
+    }
+    step(){this.x+=this.vx;this.y+=this.vy;this.vy+=0.045;this.vx*=0.97;this.vy*=0.97;this.life-=this.decay;}
+    draw(c){c.save();c.globalAlpha=Math.max(0,this.life);c.fillStyle=this.col;c.shadowBlur=5;c.shadowColor=this.col;c.beginPath();c.arc(this.x,this.y,this.r,0,Math.PI*2);c.fill();c.restore();}
+  }
+  class FW {
+    constructor(){this.reset();}
+    reset(){
+      this.x=70+Math.random()*340;this.y=30+Math.random()*200;
+      const cols=['#ff4444','#ffffff','#5588ff','#ffdd22','#ff88cc','#44ffcc','#ff9900'];
+      const col=cols[Math.floor(Math.random()*cols.length)];
+      const n=28+Math.floor(Math.random()*16);
+      this.pts=Array.from({length:n},()=>new FWP(this.x,this.y,col));
+      this.done=false;this.delay=60+Math.random()*200;
+    }
+    tick(){if(this.delay>0){this.delay--;return;}let a=0;this.pts.forEach(p=>{p.step();if(p.life>0)a++;});if(a===0)this.done=true;}
+    draw(c){if(this.delay>0)return;this.pts.forEach(p=>{if(p.life>0)p.draw(c);});}
+  }
+  const fws=Array.from({length:6},()=>new FW());
+  (function anim(){fwCtx.clearRect(0,0,480,460);fws.forEach(f=>{f.tick();f.draw(fwCtx);if(f.done)f.reset();});requestAnimationFrame(anim);})();
+
+  /* ── ALREADY PLAYED ── */
+  const SK='mfo_memorial_picnic_2025';
+  if(localStorage.getItem(SK)==='yes') document.getElementById('already-played').classList.remove('hidden');
+  function markPlayed(){localStorage.setItem(SK,'yes');}
+
+  /* ── AUDIO ── */
+  function getCtx(){
+    if(!audioCtx){try{audioCtx=new(window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}}
+    if(audioCtx.state==='suspended')audioCtx.resume();return audioCtx;
+  }
+  function playCollect(){
+    const c=getCtx();if(!c)return;
+    try{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';const t=c.currentTime;o.frequency.setValueAtTime(340,t);o.frequency.exponentialRampToValueAtTime(780,t+0.07);o.frequency.exponentialRampToValueAtTime(260,t+0.28);g.gain.setValueAtTime(0.22,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.32);o.start(t);o.stop(t+0.32);}catch(e){}
+  }
+  function playWin(){
+    const c=getCtx();if(!c)return;
+    [0,0.10,0.20,0.32].forEach((off,i)=>{try{const notes=[523,659,784,1047],o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';const t=c.currentTime+off;o.frequency.value=notes[i];g.gain.setValueAtTime(0.18,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.3);o.start(t);o.stop(t+0.3);}catch(e){}});
+  }
+  function playTap(n){
+    const c=getCtx();if(!c)return;
+    try{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';const t=c.currentTime;o.frequency.value=360+n*30;g.gain.setValueAtTime(0.10,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.13);o.start(t);o.stop(t+0.13);}catch(e){}
+  }
+
+  /* ── COLLECT ── */
+  function onFT(e,id){e.preventDefault();collectItem(id);}
+  function collectItem(id){
+    if(collected.has(id)||gameWon)return;
+    collected.add(id);
+    playCollect();
+    const el=document.getElementById(id);
+    if(el)el.classList.add('collected');
+    const n=collected.size;
+    const cEl=document.getElementById('basket-count');
+    cEl.textContent=n;cEl.classList.add('show');
+    const tEl=document.getElementById('tap-counter');
+    tEl.textContent=`${n} / ${TOTAL} 🧺`;tEl.classList.add('show');
+    clearTimeout(tapTimer);tapTimer=setTimeout(()=>tEl.classList.remove('show'),1900);
+    shakeBasket();
+    const rem=TOTAL-n;
+    document.getElementById('game-instructions').textContent=rem>0?`${rem} item${rem>1?'s':''} left to pack!`:'🎉 Basket is full!';
+    if(n>=TOTAL){gameWon=true;setTimeout(showPrize,700);}
+  }
+
+  /* ── BASKET ── */
+  function onBasketTouch(e){e.preventDefault();onBasketClick();}
+  function onBasketClick(){basketTaps++;playTap(basketTaps%8);shakeBasket();clearTimeout(tapTimer);tapTimer=setTimeout(()=>{basketTaps=0;},1500);}
+  function shakeBasket(){const b=document.getElementById('basket-wrapper');b.classList.remove('basket-shaking');void b.offsetWidth;b.classList.add('basket-shaking');setTimeout(()=>b.classList.remove('basket-shaking'),900);}
+
+  /* ── WIN + CONFETTI ── */
+  function showPrize(){playWin();spawnConfetti();document.getElementById('prize-overlay').classList.remove('hidden');}
+  const CC=['#CC0000','#002868','#FFFFFF','#FFD700','#ff69b4','#00bcd4','#ff8800'];
+  function spawnConfetti(){
+    const c=document.getElementById('confetti-container');c.innerHTML='';
+    for(let i=0;i<85;i++){const p=document.createElement('div');p.className='confetti-piece';const sz=6+Math.random()*8;p.style.cssText=`left:${(Math.random()*100).toFixed(1)}%;width:${sz}px;height:${sz}px;background:${CC[Math.floor(Math.random()*CC.length)]};border-radius:${Math.random()>0.5?'50%':'2px'};animation-duration:${(1.8+Math.random()*1.5).toFixed(2)}s;animation-delay:${(Math.random()*0.7).toFixed(2)}s;`;c.appendChild(p);}
+  }
+</script>
+</body>
+</html>
